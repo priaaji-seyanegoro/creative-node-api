@@ -1,8 +1,30 @@
 const route = require("express").Router();
 const Podcast = require("../models/Podcast");
 
-route.get("/", (req, res) => {
-  res.send("get podcast all data");
+route.get("/", async (req, res) => {
+  try {
+    const podcasts = await Podcast.find()
+      .populate("userId", "name , email")
+      .exec();
+    res.send({
+      count: podcasts.length,
+      podcast: podcasts.map((podcast) => {
+        return {
+          _id: podcast._id,
+          title: podcast.title,
+          description: podcast.description,
+          createdBy: podcast.userId,
+          request: {
+            type: "GET",
+            desc: "For get detail podcast",
+            url: `http://localhost:3000/podcast/${podcast._id}`,
+          },
+        };
+      }),
+    });
+  } catch (err) {
+    res.status(400).send(err);
+  }
 });
 
 route.get("/:podcastId", (req, res) => {
