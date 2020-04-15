@@ -5,6 +5,7 @@ const app = express();
 
 // Import Routes
 const authRoute = require("./routes/auth");
+const podcastRoute = require("./routes/podcastApi");
 const postsRoute = require("./routes/posts");
 
 dotenv.config();
@@ -27,6 +28,7 @@ app.get("/", (req, res) => {
 
 //Route Middleware
 app.use("/api/user", authRoute);
+app.use("/api/podcast", podcastRoute);
 app.use("/api/posts", postsRoute);
 
 app.listen(4000, () => {
