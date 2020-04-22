@@ -1,6 +1,43 @@
 const route = require("express").Router();
+const multer = require("multer");
 const User = require("../models/User");
 const Podcast = require("../models/Podcast");
+const { podcastValidation } = require("../validation");
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./uploads");
+  },
+  filename: function (req, file, cb) {
+    var fileFormat = file.originalname.split(".");
+    cb(
+      null,
+      file.fieldname +
+        "-" +
+        Date.now() +
+        "." +
+        fileFormat[fileFormat.length - 1]
+    );
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  //reject file
+  if (file.mimetype === "audio/mpeg" || file.mimetype === "audio/vorbis") {
+    cb(null, true);
+  } else {
+    req.fileValidationError = "goes wrong on the mimetype";
+    return cb(null, false, new Error("goes wrong on the mimetype"));
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 5,
+  },
+  fileFilter: fileFilter,
+});
 
 route.get("/", async (req, res) => {
   try {
@@ -52,8 +89,15 @@ route.get("/:podcastId", async (req, res) => {
   }
 });
 
-route.post("/", async (req, res) => {
+route.post("/", upload.single("audio"), async (req, res, next) => {
+  console.log(req.file);
+  if (req.fileValidationError) {
+    return res.end(req.fileValidationError);
+  }
   const { userId, title, description } = req.body;
+  //VALIDATE BEFORE STORE
+  const { error } = podcastValidation(req.body);
+  if (error) return res.status(400).send(error.details[0].message);
   const user = await User.findById(userId).exec();
 
   if (!user)
@@ -62,6 +106,7 @@ route.post("/", async (req, res) => {
     });
   const podcast = new Podcast({
     title: title,
+    audio: req.file.path,
     description: description,
     userId: userId,
   });

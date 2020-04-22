@@ -31,6 +31,20 @@ app.use("/api/user", authRoute);
 app.use("/api/podcast", podcastRoute);
 app.use("/api/posts", postsRoute);
 
+//error handling middleware
+app.use((err, req, res, next) => {
+  // if (!err.massage) {
+  //   res.status(422).send({
+  //     error: {
+  //       massage: "Cannot Upload file, file extensions must (.mp3)",
+  //     },
+  //   });
+  // }
+  res.status(422).send({
+    error: err,
+  });
+});
+
 app.listen(4000, () => {
   console.log("app is running onport 4000");
 });

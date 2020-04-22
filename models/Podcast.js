@@ -7,6 +7,10 @@ const podcastSchema = new mongoose.Schema({
     max: 255,
     required: true,
   },
+  audio: {
+    type: String,
+    required: true,
+  },
   description: {
     type: String,
     max: 2048,
