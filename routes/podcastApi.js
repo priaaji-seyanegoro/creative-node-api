@@ -1,5 +1,7 @@
 const route = require("express").Router();
 const multer = require("multer");
+const fs = require("fs");
+const { promisify } = require("util");
 const User = require("../models/User");
 const Podcast = require("../models/Podcast");
 const { podcastValidation } = require("../validation");
@@ -9,14 +11,11 @@ const storage = multer.diskStorage({
     cb(null, "./uploads");
   },
   filename: function (req, file, cb) {
-    var fileFormat = file.originalname.split(".");
+    const fileFormat = file.originalname.split(".");
+    const filename = file.originalname.split(".").slice(0, -1).join(".");
     cb(
       null,
-      file.fieldname +
-        "-" +
-        Date.now() +
-        "." +
-        fileFormat[fileFormat.length - 1]
+      filename + "-" + Date.now() + "." + fileFormat[fileFormat.length - 1]
     );
   },
 });
@@ -25,6 +24,7 @@ const fileFilter = (req, file, cb) => {
   //reject file
   if (file.mimetype === "audio/mpeg" || file.mimetype === "audio/vorbis") {
     cb(null, true);
+    console.log("file :", req.body);
   } else {
     req.fileValidationError = "goes wrong on the mimetype";
     return cb(null, false, new Error("goes wrong on the mimetype"));
@@ -34,7 +34,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 1024 * 1024 * 5,
+    fileSize: 1024 * 1024 * 50,
   },
   fileFilter: fileFilter,
 });
@@ -96,7 +96,14 @@ route.post("/", upload.single("audio"), async (req, res, next) => {
   if (error) return res.status(400).send(error.details[0].message);
 
   if (req.fileValidationError) {
-    return res.end(req.fileValidationError);
+    return res.send(req.fileValidationError);
+  } else if (req.file == null) {
+    console.log(req.file);
+    return res.status(400).send({
+      error: {
+        message: "Audio Required",
+      },
+    });
   }
 
   const user = await User.findById(userId).exec();
@@ -151,9 +158,17 @@ route.patch("/:podcastId", async (req, res) => {
 
 route.delete("/:podcastId", async (req, res) => {
   try {
+    const unlinkFile = await Podcast.findById({
+      _id: req.params.podcastId,
+    });
+
+    const unlinkAsync = promisify(fs.unlink);
+    await unlinkAsync(unlinkFile.audio);
+
     const removePodcast = await Podcast.deleteOne({
       _id: req.params.podcastId,
     });
+
     res.send({
       massage: "Podcast Deleted",
       podcast: removePodcast,
