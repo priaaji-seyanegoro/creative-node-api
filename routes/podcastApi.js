@@ -90,16 +90,16 @@ route.get("/:podcastId", async (req, res) => {
 });
 
 route.post("/", upload.single("audio"), async (req, res, next) => {
-  console.log(req.file);
-  if (req.fileValidationError) {
-    return res.end(req.fileValidationError);
-  }
   const { userId, title, description } = req.body;
   //VALIDATE BEFORE STORE
   const { error } = podcastValidation(req.body);
   if (error) return res.status(400).send(error.details[0].message);
-  const user = await User.findById(userId).exec();
 
+  if (req.fileValidationError) {
+    return res.end(req.fileValidationError);
+  }
+
+  const user = await User.findById(userId).exec();
   if (!user)
     return res.status(404).send({
       message: "Sorry UserId not found",
