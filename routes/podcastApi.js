@@ -20,13 +20,26 @@ const storage = multer.diskStorage({
   },
 });
 
-const fileFilter = (req, file, cb) => {
+//FILTER FILES
+
+const fileFilter = (req, files, cb) => {
   //reject file
-  if (file.mimetype === "audio/mpeg" || file.mimetype === "audio/vorbis") {
+  if (
+    files.mimetype === "audio/mpeg" ||
+    files.mimetype === "audio/vorbis" ||
+    files.mimetype === "image/jpeg" ||
+    files.mimetype === "image/png"
+  ) {
     cb(null, true);
-    console.log("file :", req.body);
+    console.log(files);
   } else {
-    req.fileValidationError = "goes wrong on the mimetype";
+    req.fileValidationError = {
+      massage: "goes wrong on the mimetype",
+      mimetype: {
+        audio: "mp3",
+        coverImage: "jpg/png",
+      },
+    };
     return cb(null, false, new Error("goes wrong on the mimetype"));
   }
 };
@@ -89,41 +102,48 @@ route.get("/:podcastId", async (req, res) => {
   }
 });
 
-route.post("/", upload.single("audio"), async (req, res, next) => {
-  const { userId, title, description } = req.body;
-  //VALIDATE BEFORE STORE
-  const { error } = podcastValidation(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
+route.post(
+  "/",
+  upload.fields([
+    { name: "audio", maxCount: 1 },
+    { name: "coverImage", maxCount: 1 },
+  ]),
+  async (req, res, next) => {
+    const { userId, title, description } = req.body;
+    // VALIDATE BEFORE STORE
+    const { error } = podcastValidation(req.body);
+    if (error) return res.status(400).send(error.details[0].message);
 
-  if (req.fileValidationError) {
-    return res.send(req.fileValidationError);
-  } else if (req.file == null) {
-    console.log(req.file);
-    return res.status(400).send({
-      error: {
-        message: "Audio Required",
-      },
-    });
-  }
+    if (req.fileValidationError) {
+      return res.send(req.fileValidationError);
+    }
 
-  const user = await User.findById(userId).exec();
-  if (!user)
-    return res.status(404).send({
-      message: "Sorry UserId not found",
+    //PATH FILE
+    const audioPath = req.files.audio[0].path;
+    const coverImagePath = req.files.coverImage[0].path;
+
+    //FIND USER ID
+    const user = await User.findById(userId).exec();
+    if (!user)
+      return res.status(404).send({
+        message: "Sorry UserId not found",
+      });
+
+    const podcast = new Podcast({
+      title: title,
+      audio: audioPath,
+      coverImage: coverImagePath,
+      description: description,
+      userId: userId,
     });
-  const podcast = new Podcast({
-    title: title,
-    audio: req.file.path,
-    description: description,
-    userId: userId,
-  });
-  try {
-    const savedPodcast = await podcast.save();
-    res.send(savedPodcast);
-  } catch (err) {
-    res.status(400).send(err);
+    try {
+      const savedPodcast = await podcast.save();
+      res.send(savedPodcast);
+    } catch (err) {
+      res.status(400).send(err);
+    }
   }
-});
+);
 
 route.patch("/:podcastId", async (req, res) => {
   const id = req.params.podcastId;
@@ -164,6 +184,7 @@ route.delete("/:podcastId", async (req, res) => {
 
     const unlinkAsync = promisify(fs.unlink);
     await unlinkAsync(unlinkFile.audio);
+    await unlinkAsync(unlinkFile.coverImage);
 
     const removePodcast = await Podcast.deleteOne({
       _id: req.params.podcastId,
