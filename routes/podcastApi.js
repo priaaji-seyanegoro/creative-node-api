@@ -7,7 +7,7 @@ const Podcast = require("../models/Podcast");
 const { podcastValidation } = require("../validation");
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: function (req, files, cb) {
     cb(null, "./uploads");
   },
   filename: function (req, file, cb) {
@@ -118,16 +118,28 @@ route.post(
       return res.send(req.fileValidationError);
     }
 
-    //PATH FILE
-    const audioPath = req.files.audio[0].path;
-    const coverImagePath = req.files.coverImage[0].path;
-
     //FIND USER ID
     const user = await User.findById(userId).exec();
     if (!user)
       return res.status(404).send({
         message: "Sorry UserId not found",
       });
+
+    if (!req.files.audio) {
+      return res.status(400).send({
+        error: "Files Audio Required",
+        type: " Format MP3 | Size Max 50MB",
+      });
+    } else if (!req.files.coverImage) {
+      return res.status(400).send({
+        error: "Files Cover Image Required",
+        type: " Format JPG/PNG | Size Max 50MB",
+      });
+    }
+
+    //PATH FILE
+    const audioPath = req.files.audio[0].path;
+    const coverImagePath = req.files.coverImage[0].path;
 
     const podcast = new Podcast({
       title: title,
