@@ -63,6 +63,8 @@ route.get("/", async (req, res) => {
         return {
           _id: podcast._id,
           title: podcast.title,
+          audio: podcast.audio,
+          coverImage: podcast.coverImage,
           description: podcast.description,
           createdBy: podcast.userId,
           request: {
