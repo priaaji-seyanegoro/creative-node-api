@@ -28,7 +28,7 @@ app.get("/", (req, res) => {
 });
 
 //Route Middleware
-app.use("/api/user", authRoute);
+app.use("/api/user/auth", authRoute);
 app.use("/api/podcast", podcastRoute);
 app.use("/api/posts", postsRoute);
 
@@ -39,6 +39,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(4000, () => {
+app.listen(5000, () => {
   console.log("app is running onport 4000");
 });

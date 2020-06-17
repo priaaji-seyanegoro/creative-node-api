@@ -4,16 +4,26 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { registerValidation, loginValidation } = require("../validation");
 
+route.get("/testing", async (req, res) => {
+  const user = await User.find();
+
+  res.send(user);
+});
+
 route.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
+  const { namePodcast, email, password } = req.body;
 
   //VALIDATE BEFORE STORE
   const { error } = registerValidation(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
   //CHECK USER ALREADY EXIST
+  const namePodcastExist = await User.findOne({ namePodcast: namePodcast });
+  if (namePodcastExist)
+    return res.status(400).send("Name Podcast already exist");
+
   const emailExits = await User.findOne({ email: email });
-  if (emailExits) return res.status(400).send("email already exist");
+  if (emailExits) return res.status(400).send("Email already exist");
 
   //HASH PASSWORD
   const salt = await bcrypt.genSalt(10);
@@ -21,7 +31,8 @@ route.post("/register", async (req, res) => {
 
   //CREATE NEW USER
   const user = new User({
-    name: name,
+    avatar: "no image",
+    namePodcast: namePodcast,
     email: email,
     password: hashPassword,
   });
@@ -31,7 +42,7 @@ route.post("/register", async (req, res) => {
     res.send({
       user: {
         _id: savedUser._id,
-        name: savedUser.name,
+        namePodcast: savedUser.namePodcast,
         email: savedUser.email,
       },
     });
