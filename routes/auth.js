@@ -15,15 +15,26 @@ route.post("/register", async (req, res) => {
 
   //VALIDATE BEFORE STORE
   const { error } = registerValidation(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
+  if (error)
+    return res.status(400).send({
+      status: false,
+      error: error.details[0].message,
+    });
 
   //CHECK USER ALREADY EXIST
   const namePodcastExist = await User.findOne({ namePodcast: namePodcast });
   if (namePodcastExist)
-    return res.status(400).send("Name Podcast already exist");
+    return res.status(400).send({
+      status: false,
+      error: "Name Podcast already exist",
+    });
 
   const emailExits = await User.findOne({ email: email });
-  if (emailExits) return res.status(400).send("Email already exist");
+  if (emailExits)
+    return res.status(400).send({
+      status: false,
+      error: "Email already exist",
+    });
 
   //HASH PASSWORD
   const salt = await bcrypt.genSalt(10);
@@ -45,6 +56,7 @@ route.post("/register", async (req, res) => {
         namePodcast: savedUser.namePodcast,
         email: savedUser.email,
       },
+      status: true,
     });
   } catch (err) {
     res.status(400).send(err);
@@ -52,29 +64,42 @@ route.post("/register", async (req, res) => {
 });
 
 route.post("/login", async (req, res) => {
-  const { name, email, password } = req.body;
+  const { email, password } = req.body;
 
   //VALIDATE BEFORE STORE
   const { error } = loginValidation(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
+  if (error)
+    return res.status(400).send({
+      status: false,
+      error: error.details[0].message,
+    });
 
   //CHECK USER NOT ALREADY EXIST
   const user = await User.findOne({ email: email });
-  if (!user) return res.status(400).send("email not exist");
+  if (!user)
+    return res.status(400).send({
+      status: false,
+      error: "email not exist",
+    });
 
   //CHECK PASSWORD CORRECT
   const validPass = await bcrypt.compare(password, user.password);
-  if (!validPass) return res.status(400).send("Invalid password");
+  if (!validPass)
+    return res.status(400).send({
+      status: false,
+      error: "Invalid password",
+    });
 
   //CREATED AND ASSIGN TOKEN
   const token = jwt.sign({ _id: user.id }, process.env.TOKEN_SECRET);
   res.header("auth-token", token).send({
     user: {
       _id: user._id,
-      name: user.name,
+      name: user.namePodcast,
       email: user.email,
       token: token,
     },
+    status: true,
   });
 });
 module.exports = route;
