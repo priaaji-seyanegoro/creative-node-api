@@ -25,7 +25,6 @@ const podcastValidation = (data) => {
   const schema = Joi.object({
     title: Joi.string().min(6).required(),
     description: Joi.string().min(6).required(),
-    userId: Joi.required(),
   });
 
   return schema.validate(data);

@@ -5,6 +5,7 @@ const { promisify } = require("util");
 const User = require("../models/User");
 const Podcast = require("../models/Podcast");
 const { podcastValidation } = require("../validation");
+const verifyToken = require("./verifyToken");
 
 const storage = multer.diskStorage({
   destination: function (req, files, cb) {
@@ -31,7 +32,7 @@ const fileFilter = (req, files, cb) => {
     files.mimetype === "image/png"
   ) {
     cb(null, true);
-    console.log(files);
+    // console.log(files);
   } else {
     req.fileValidationError = {
       massage: "goes wrong on the mimetype",
@@ -47,12 +48,12 @@ const fileFilter = (req, files, cb) => {
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 1024 * 1024 * 50,
+    fileSize: 1024 * 1024 * 500,
   },
   fileFilter: fileFilter,
 });
 
-route.get("/", async (req, res) => {
+route.get("/", verifyToken, async (req, res) => {
   try {
     const podcasts = await Podcast.find()
       .populate("userId", "name , email")
@@ -106,22 +107,33 @@ route.get("/:podcastId", async (req, res) => {
 
 route.post(
   "/",
+  verifyToken,
   upload.fields([
     { name: "audio", maxCount: 1 },
     { name: "coverImage", maxCount: 1 },
   ]),
   async (req, res, next) => {
-    const { userId, title, description } = req.body;
+    const { title, description } = req.body;
+
+    //PATH FILE
+    const audioPath = req.files.audio[0].path;
+    const coverImagePath = req.files.coverImage[0].path;
+
     // VALIDATE BEFORE STORE
     const { error } = podcastValidation(req.body);
-    if (error) return res.status(400).send(error.details[0].message);
+    if (error) {
+      const unlinkAsync = promisify(fs.unlink);
+      await unlinkAsync(audioPath);
+      await unlinkAsync(coverImagePath);
+      return res.status(400).send(error.details[0].message);
+    }
 
     if (req.fileValidationError) {
       return res.send(req.fileValidationError);
     }
 
     //FIND USER ID
-    const user = await User.findById(userId).exec();
+    const user = await User.findById(req.user._id).exec();
     if (!user)
       return res.status(404).send({
         message: "Sorry UserId not found",
@@ -139,21 +151,20 @@ route.post(
       });
     }
 
-    //PATH FILE
-    const audioPath = req.files.audio[0].path;
-    const coverImagePath = req.files.coverImage[0].path;
-
     const podcast = new Podcast({
       title: title,
       audio: audioPath,
       coverImage: coverImagePath,
       description: description,
-      userId: userId,
+      userId: req.user._id,
     });
     try {
       const savedPodcast = await podcast.save();
       res.send(savedPodcast);
     } catch (err) {
+      const unlinkAsync = promisify(fs.unlink);
+      await unlinkAsync(audioPath);
+      await unlinkAsync(coverImagePath);
       res.status(400).send(err);
     }
   }

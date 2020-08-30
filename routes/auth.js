@@ -90,15 +90,19 @@ route.post("/login", async (req, res) => {
       error: "Invalid password",
     });
 
+  const jwtPayload = {
+    _id: user.id,
+    email: user.email,
+  };
   //CREATED AND ASSIGN TOKEN
-  const token = jwt.sign({ _id: user.id }, process.env.TOKEN_SECRET);
+  const token = jwt.sign(jwtPayload, process.env.TOKEN_SECRET, {
+    expiresIn: "3day",
+  });
   res.header("auth-token", token).send({
-    user: {
-      _id: user._id,
-      name: user.namePodcast,
-      email: user.email,
-      token: token,
-    },
+    _id: user._id,
+    name: user.namePodcast,
+    email: user.email,
+    token: token,
     status: true,
   });
 });

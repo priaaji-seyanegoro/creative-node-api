@@ -2,7 +2,7 @@ const route = require("express").Router();
 const verify = require("./verifyToken");
 
 route.get("/", verify, (req, res) => {
-  res.send("this private route can be access");
+  res.send(req.user);
 });
 
 module.exports = route;
