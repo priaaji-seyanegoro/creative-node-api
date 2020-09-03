@@ -9,7 +9,10 @@ const verifyAuth = (req, res, next) => {
     req.user = verifed;
     next();
   } catch (err) {
-    res.status(400).send("Invalid token");
+    res.status(400).send({
+      status: false,
+      error: "Invalid token",
+    });
   }
 };
 

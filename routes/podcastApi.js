@@ -22,7 +22,6 @@ const storage = multer.diskStorage({
 });
 
 //FILTER FILES
-
 const fileFilter = (req, files, cb) => {
   //reject file
   if (
@@ -53,6 +52,7 @@ const upload = multer({
   fileFilter: fileFilter,
 });
 
+//GET ALL PODCAST
 route.get("/", verifyToken, async (req, res) => {
   try {
     const podcasts = await Podcast.find()
@@ -81,6 +81,7 @@ route.get("/", verifyToken, async (req, res) => {
   }
 });
 
+//READ PODCAST BY ID
 route.get("/:podcastId", async (req, res) => {
   try {
     const podcast = await Podcast.findById(req.params.podcastId)
@@ -105,6 +106,7 @@ route.get("/:podcastId", async (req, res) => {
   }
 });
 
+//UPLOAD PODCAST
 route.post(
   "/",
   verifyToken,
@@ -160,16 +162,23 @@ route.post(
     });
     try {
       const savedPodcast = await podcast.save();
-      res.send(savedPodcast);
+      res.status(200).send({
+        podcast: savedPodcast,
+        status: true,
+      });
     } catch (err) {
       const unlinkAsync = promisify(fs.unlink);
       await unlinkAsync(audioPath);
       await unlinkAsync(coverImagePath);
-      res.status(400).send(err);
+      res.status(400).send({
+        status: false,
+        error: err,
+      });
     }
   }
 );
 
+//UPDATE PODCAST
 route.patch("/:podcastId", async (req, res) => {
   const id = req.params.podcastId;
   const { title, description } = req.body;
@@ -201,6 +210,7 @@ route.patch("/:podcastId", async (req, res) => {
   }
 });
 
+//DELETE PODCAST
 route.delete("/:podcastId", async (req, res) => {
   try {
     const unlinkFile = await Podcast.findById({
