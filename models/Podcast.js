@@ -20,6 +20,10 @@ const podcastSchema = new mongoose.Schema(
       type: String,
       max: 2048,
     },
+    likes: {
+      type: Number,
+      default: 0,
+    },
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",

@@ -52,14 +52,14 @@ const upload = multer({
   fileFilter: fileFilter,
 });
 
-//GET ALL PODCAST
-route.get("/", verifyToken, async (req, res) => {
+route.get("/", async (req, res) => {
   try {
-    const podcasts = await Podcast.find()
-      .populate("userId", "name , email")
+    const podcasts = await Podcast.find({})
+      .populate("userId", "namePodcast , email")
       .exec();
     res.send({
       count: podcasts.length,
+      status: true,
       podcast: podcasts.map((podcast) => {
         return {
           _id: podcast._id,
@@ -77,16 +77,85 @@ route.get("/", verifyToken, async (req, res) => {
       }),
     });
   } catch (err) {
-    res.status(400).send(err);
+    res.status(400).send({
+      status: false,
+      error: err,
+    });
+  }
+});
+
+route.get("/search", async (req, res) => {
+  let q = req.query.q;
+
+  const podcasts = await Podcast.find({
+    $text: {
+      $search: q,
+    },
+  })
+    .limit(5)
+    .populate("userId", "namePodcast , email")
+    .exec();
+
+  res.send({
+    count: podcasts.length,
+    status: true,
+    podcast: podcasts.map((podcast) => {
+      return {
+        _id: podcast._id,
+        title: podcast.title,
+        audio: podcast.audio,
+        coverImage: podcast.coverImage,
+        description: podcast.description,
+        createdBy: podcast.userId,
+        request: {
+          type: "GET",
+          desc: "For get detail podcast",
+          url: `http://localhost:4000/api/podcast/${podcast._id}`,
+        },
+      };
+    }),
+  });
+});
+
+//GET PODCAST BY USER_ID
+route.get("/yourPodcast", verifyToken, async (req, res) => {
+  try {
+    const podcasts = await Podcast.find({ userId: req.user._id })
+      .populate("userId", "namePodcast , email")
+      .exec();
+    res.send({
+      count: podcasts.length,
+      status: true,
+      podcast: podcasts.map((podcast) => {
+        return {
+          _id: podcast._id,
+          title: podcast.title,
+          audio: podcast.audio,
+          coverImage: podcast.coverImage,
+          description: podcast.description,
+          createdBy: podcast.userId,
+          request: {
+            type: "GET",
+            desc: "For get detail podcast",
+            url: `http://localhost:4000/api/podcast/${podcast._id}`,
+          },
+        };
+      }),
+    });
+  } catch (err) {
+    res.status(400).send({
+      status: false,
+      error: err,
+    });
   }
 });
 
 //READ PODCAST BY ID
-route.get("/:podcastId", async (req, res) => {
+route.get("/:podcastId", verifyToken, async (req, res) => {
   try {
     const podcast = await Podcast.findById(req.params.podcastId)
-      .select("_id title description userId date")
-      .populate("userId", "name , email")
+      .select("_id title description coverImage likes audio createdAt userId ")
+      .populate("userId", "namePodcast")
       .exec();
     if (!podcast)
       return res.status(404).send({
@@ -94,7 +163,14 @@ route.get("/:podcastId", async (req, res) => {
       });
 
     res.status(200).send({
-      podcast: podcast,
+      _id: podcast._id,
+      title: podcast.title,
+      audio: podcast.audio,
+      coverImage: podcast.coverImage,
+      likes: podcast.likes,
+      description: podcast.description,
+      createdBy: podcast.userId,
+      createdAt: podcast.createdAt,
       request: {
         type: "GET",
         desc: "Get All Data Podcasts",
@@ -179,7 +255,7 @@ route.post(
 );
 
 //UPDATE PODCAST
-route.patch("/:podcastId", async (req, res) => {
+route.put("/:podcastId", verifyToken, async (req, res) => {
   const id = req.params.podcastId;
   const { title, description } = req.body;
   try {
@@ -194,6 +270,7 @@ route.patch("/:podcastId", async (req, res) => {
     );
 
     res.send({
+      status: true,
       massage: "Podcast Updated",
       podcast: podcast,
       request: {
@@ -204,6 +281,7 @@ route.patch("/:podcastId", async (req, res) => {
     });
   } catch (error) {
     res.status(400).send({
+      status: false,
       message: "Podcast not found",
       error: error.message,
     });
@@ -211,7 +289,7 @@ route.patch("/:podcastId", async (req, res) => {
 });
 
 //DELETE PODCAST
-route.delete("/:podcastId", async (req, res) => {
+route.delete("/:podcastId", verifyToken, async (req, res) => {
   try {
     const unlinkFile = await Podcast.findById({
       _id: req.params.podcastId,
@@ -227,7 +305,7 @@ route.delete("/:podcastId", async (req, res) => {
 
     res.send({
       massage: "Podcast Deleted",
-      podcast: removePodcast,
+      status: true,
       request: {
         type: "POST",
         desc: "For Created New Podcast",
@@ -237,6 +315,7 @@ route.delete("/:podcastId", async (req, res) => {
   } catch (error) {
     res.status(400).send({
       message: "Podcast not found",
+      status: false,
       error: error.message,
     });
   }

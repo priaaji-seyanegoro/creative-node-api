@@ -10,6 +10,25 @@ route.get("/testing", async (req, res) => {
   res.send(user);
 });
 
+route.get("/search", async (req, res) => {
+  let q = req.query.q;
+
+  User.find(
+    {
+      $text: {
+        $search: q,
+      },
+    },
+    {
+      _id: 0,
+      _v: 0,
+    },
+    function (err, data) {
+      res.json(data);
+    }
+  ).limit(5);
+});
+
 route.post("/register", async (req, res) => {
   const { namePodcast, email, password } = req.body;
 
