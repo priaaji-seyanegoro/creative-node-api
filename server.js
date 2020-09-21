@@ -5,9 +5,11 @@ const dotenv = require("dotenv");
 const app = express();
 
 // Import Routes
-const authRoute = require("./routes/auth");
-const podcastRoute = require("./routes/podcastApi");
+const authRoute = require("./routes/authRoute");
+const podcastRoute = require("./routes/podcastRoute");
 const postsRoute = require("./routes/posts");
+const likesRoute = require("./routes/likesRoute");
+const followRoute = require("./routes/followRoute");
 
 dotenv.config();
 
@@ -33,6 +35,8 @@ app.get("/", (req, res) => {
 app.use("/api/user/auth", authRoute);
 app.use("/api/podcast", podcastRoute);
 app.use("/api/posts", postsRoute);
+app.use("/api/likes", likesRoute);
+app.use("/api/follow", followRoute);
 
 //error handling middleware
 app.use((err, req, res, next) => {

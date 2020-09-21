@@ -4,6 +4,8 @@ const fs = require("fs");
 const { promisify } = require("util");
 const User = require("../models/User");
 const Podcast = require("../models/Podcast");
+const Like = require("../models/Like");
+const Follow = require("../models/Follow");
 const { podcastValidation } = require("../validation");
 const verifyToken = require("./verifyToken");
 
@@ -52,9 +54,19 @@ const upload = multer({
   fileFilter: fileFilter,
 });
 
-route.get("/", async (req, res) => {
+//GET ALL DATA PODCASTS
+route.get("/", verifyToken, async (req, res) => {
+  const followingList = await Follow.find({
+    userId: req.user._id,
+  }).select("followedId");
+
+  const a = followingList.map((d) => d.followedId);
+
   try {
-    const podcasts = await Podcast.find({})
+    const podcasts = await Podcast.find({
+      userId: { $in: a },
+    })
+      .sort({ likes: "desc" })
       .populate("userId", "namePodcast , email")
       .exec();
     res.send({
@@ -84,6 +96,41 @@ route.get("/", async (req, res) => {
   }
 });
 
+route.get("/trending", async (req, res) => {
+  try {
+    const podcasts = await Podcast.find({})
+      .sort({ likes: "desc" })
+      .populate("userId", "namePodcast , email")
+      .limit(3)
+      .exec();
+    res.send({
+      count: podcasts.length,
+      status: true,
+      podcast: podcasts.map((podcast) => {
+        return {
+          _id: podcast._id,
+          title: podcast.title,
+          audio: podcast.audio,
+          coverImage: podcast.coverImage,
+          description: podcast.description,
+          createdBy: podcast.userId,
+          request: {
+            type: "GET",
+            desc: "For get detail podcast",
+            url: `http://localhost:4000/api/podcast/${podcast._id}`,
+          },
+        };
+      }),
+    });
+  } catch (err) {
+    res.status(400).send({
+      status: false,
+      error: err,
+    });
+  }
+});
+
+//SEARCH PODCAST
 route.get("/search", async (req, res) => {
   let q = req.query.q;
 
@@ -153,14 +200,33 @@ route.get("/yourPodcast", verifyToken, async (req, res) => {
 //READ PODCAST BY ID
 route.get("/:podcastId", verifyToken, async (req, res) => {
   try {
+    let hasLike = false;
+    let hasFollow = false;
     const podcast = await Podcast.findById(req.params.podcastId)
-      .select("_id title description coverImage likes audio createdAt userId ")
       .populate("userId", "namePodcast")
       .exec();
     if (!podcast)
       return res.status(404).send({
         message: "Sorry Podcast not found",
       });
+
+    const followExist = await Follow.findOne({
+      userId: req.user._id,
+      followedId: podcast.userId._id,
+    });
+
+    if (followExist) {
+      hasFollow = true;
+    }
+
+    const likeExist = await Like.findOne({
+      podcastId: podcast._id,
+      likeBy: req.user._id,
+    });
+
+    if (likeExist) {
+      hasLike = true;
+    }
 
     res.status(200).send({
       _id: podcast._id,
@@ -171,6 +237,8 @@ route.get("/:podcastId", verifyToken, async (req, res) => {
       description: podcast.description,
       createdBy: podcast.userId,
       createdAt: podcast.createdAt,
+      hasLike: hasLike,
+      hasFollow: hasFollow,
       request: {
         type: "GET",
         desc: "Get All Data Podcasts",
@@ -301,6 +369,11 @@ route.delete("/:podcastId", verifyToken, async (req, res) => {
 
     const removePodcast = await Podcast.deleteOne({
       _id: req.params.podcastId,
+    });
+
+    const removeLike = await Like.deleteOne({
+      podcastId: req.params.podcastId,
+      likeBy: req.user._id,
     });
 
     res.send({
