@@ -45,6 +45,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(process.ENV.PORT || 5000, () => {
+app.listen(process.env.PORT || 5000, () => {
   console.log("app is running onport 5000");
 });
