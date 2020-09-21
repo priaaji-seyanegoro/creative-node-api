@@ -83,7 +83,7 @@ route.get("/", verifyToken, async (req, res) => {
           request: {
             type: "GET",
             desc: "For get detail podcast",
-            url: `http://localhost:4000/api/podcast/${podcast._id}`,
+            url: `https://cryptic-thicket-69508.herokuapp.com/api/podcast/${podcast._id}`,
           },
         };
       }),
@@ -117,7 +117,7 @@ route.get("/trending", async (req, res) => {
           request: {
             type: "GET",
             desc: "For get detail podcast",
-            url: `http://localhost:4000/api/podcast/${podcast._id}`,
+            url: `https://cryptic-thicket-69508.herokuapp.com/api/podcast/${podcast._id}`,
           },
         };
       }),
@@ -157,7 +157,7 @@ route.get("/search", async (req, res) => {
         request: {
           type: "GET",
           desc: "For get detail podcast",
-          url: `http://localhost:4000/api/podcast/${podcast._id}`,
+          url: `https://cryptic-thicket-69508.herokuapp.com/api/podcast/${podcast._id}`,
         },
       };
     }),
@@ -184,7 +184,7 @@ route.get("/yourPodcast", verifyToken, async (req, res) => {
           request: {
             type: "GET",
             desc: "For get detail podcast",
-            url: `http://localhost:4000/api/podcast/${podcast._id}`,
+            url: `https://cryptic-thicket-69508.herokuapp.com/api/podcast/${podcast._id}`,
           },
         };
       }),
@@ -242,7 +242,7 @@ route.get("/:podcastId", verifyToken, async (req, res) => {
       request: {
         type: "GET",
         desc: "Get All Data Podcasts",
-        url: "http://localhost:4000/api/podcast",
+        url: "https://cryptic-thicket-69508.herokuapp.com/api/podcast",
       },
     });
   } catch (err) {
@@ -344,7 +344,7 @@ route.put("/:podcastId", verifyToken, async (req, res) => {
       request: {
         type: "DELETE",
         desc: "For Delete data",
-        url: `http://localhost:4000/api/podcast/${id}`,
+        url: `https://cryptic-thicket-69508.herokuapp.com/api/podcast/${id}`,
       },
     });
   } catch (error) {
@@ -382,7 +382,7 @@ route.delete("/:podcastId", verifyToken, async (req, res) => {
       request: {
         type: "POST",
         desc: "For Created New Podcast",
-        url: `http://localhost:4000/api/podcast`,
+        url: `https://cryptic-thicket-69508.herokuapp.com/api/podcast`,
       },
     });
   } catch (error) {
