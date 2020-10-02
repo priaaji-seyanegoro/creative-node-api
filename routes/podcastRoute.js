@@ -1,25 +1,23 @@
 const route = require("express").Router();
 const multer = require("multer");
+const { cloudinary } = require("../utils/cloudinary");
 const fs = require("fs");
 const { promisify } = require("util");
+
 const User = require("../models/User");
 const Podcast = require("../models/Podcast");
 const Like = require("../models/Like");
 const Follow = require("../models/Follow");
 const { podcastValidation } = require("../validation");
 const verifyToken = require("./verifyToken");
+require("dotenv").config();
 
 const storage = multer.diskStorage({
   destination: function (req, files, cb) {
-    cb(null, "./uploads");
+    cb(null, "uploads");
   },
-  filename: function (req, file, cb) {
-    const fileFormat = file.originalname.split(".");
-    const filename = file.originalname.split(".").slice(0, -1).join(".");
-    cb(
-      null,
-      filename + "-" + Date.now() + "." + fileFormat[fileFormat.length - 1]
-    );
+  filename: function (req, file, callback) {
+    callback(null, Date.now() + file.originalname);
   },
 });
 
@@ -38,7 +36,7 @@ const fileFilter = (req, files, cb) => {
     req.fileValidationError = {
       massage: "goes wrong on the mimetype",
       mimetype: {
-        audio: "mp3",
+        audio: "mp3 | mpeg",
         coverImage: "jpg/png",
       },
     };
@@ -251,76 +249,85 @@ route.get("/:podcastId", verifyToken, async (req, res) => {
 });
 
 //UPLOAD PODCAST
-route.post(
-  "/",
-  verifyToken,
-  upload.fields([
-    { name: "audio", maxCount: 1 },
-    { name: "coverImage", maxCount: 1 },
-  ]),
-  async (req, res, next) => {
-    const { title, description } = req.body;
+route.post("/", verifyToken, upload.any(), async (req, res, next) => {
+  var audioPath = req.files[0].path;
+  var imgPath = req.files[1].path;
+  const { title, description } = req.body;
 
-    //PATH FILE
-    const audioPath = req.files.audio[0].path;
-    const coverImagePath = req.files.coverImage[0].path;
-
-    // VALIDATE BEFORE STORE
-    const { error } = podcastValidation(req.body);
-    if (error) {
-      const unlinkAsync = promisify(fs.unlink);
-      await unlinkAsync(audioPath);
-      await unlinkAsync(coverImagePath);
-      return res.status(400).send(error.details[0].message);
-    }
-
-    if (req.fileValidationError) {
-      return res.send(req.fileValidationError);
-    }
-
-    //FIND USER ID
-    const user = await User.findById(req.user._id).exec();
-    if (!user)
-      return res.status(404).send({
-        message: "Sorry UserId not found",
-      });
-
-    if (!req.files.audio) {
-      return res.status(400).send({
-        error: "Files Audio Required",
-        type: " Format MP3 | Size Max 50MB",
-      });
-    } else if (!req.files.coverImage) {
-      return res.status(400).send({
-        error: "Files Cover Image Required",
-        type: " Format JPG/PNG | Size Max 50MB",
-      });
-    }
-
-    const podcast = new Podcast({
-      title: title,
-      audio: audioPath,
-      coverImage: coverImagePath,
-      description: description,
-      userId: req.user._id,
-    });
-    try {
-      const savedPodcast = await podcast.save();
-      res.status(200).send({
-        podcast: savedPodcast,
-        status: true,
-      });
-    } catch (err) {
-      const unlinkAsync = promisify(fs.unlink);
-      await unlinkAsync(audioPath);
-      await unlinkAsync(coverImagePath);
-      res.status(400).send({
-        status: false,
-        error: err,
-      });
-    }
+  // VALIDATE BEFORE STORE
+  const { error } = podcastValidation(req.body);
+  if (error) {
+    const unlinkAsync = promisify(fs.unlink);
+    await unlinkAsync(audioPath);
+    await unlinkAsync(imgPath);
+    return res.status(400).send(error.details[0].message);
   }
-);
+
+  if (req.fileValidationError) {
+    return res.send(req.fileValidationError);
+  }
+
+  //FIND USER ID
+  const user = await User.findById(req.user._id).exec();
+  if (!user)
+    return res.status(404).send({
+      message: "Sorry UserId not found",
+    });
+
+  if (!audioPath) {
+    return res.status(400).send({
+      error: "Files Audio Required",
+      type: " Format MP3 | Size Max 50MB",
+    });
+  } else if (!imgPath) {
+    return res.status(400).send({
+      error: "Files Cover Image Required",
+      type: " Format JPG/PNG | Size Max 50MB",
+    });
+  }
+
+  const audio = cloudinary.uploader.upload(audioPath, {
+    folder: "cn_asset",
+    resource_type: "auto",
+  });
+
+  const image = cloudinary.uploader.upload(imgPath, {
+    folder: "cn_asset",
+    resource_type: "auto",
+  });
+
+  Promise.all([audio, image])
+    .then(async (values) => {
+      const podcast = new Podcast({
+        title: title,
+        audio: values[0].secure_url,
+        coverImage: values[1].secure_url,
+        publicId_audio: values[0].public_id,
+        publicId_image: values[1].public_id,
+        description: description,
+        userId: req.user._id,
+      });
+
+      try {
+        const savedPodcast = await podcast.save();
+        res.status(200).send({
+          podcast: savedPodcast,
+          status: true,
+        });
+      } catch (err) {
+        const unlinkAsync = promisify(fs.unlink);
+        await unlinkAsync(audioPath);
+        await unlinkAsync(imgPath);
+        res.status(400).send({
+          status: false,
+          error: err,
+        });
+      }
+    })
+    .catch((err) => {
+      res.send(err);
+    });
+});
 
 //UPDATE PODCAST
 route.put("/:podcastId", verifyToken, async (req, res) => {

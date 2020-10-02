@@ -16,6 +16,14 @@ const podcastSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    publicId_image: {
+      type: String,
+      required: true,
+    },
+    publicId_audio: {
+      type: String,
+      required: true,
+    },
     description: {
       type: String,
       max: 2048,
