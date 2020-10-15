@@ -52,7 +52,7 @@ const upload = multer({
   fileFilter: fileFilter,
 });
 
-//GET ALL DATA PODCASTS
+//GET ALL DATA PODCASTS by followees
 route.get("/", verifyToken, async (req, res) => {
   const followingList = await Follow.find({
     userId: req.user._id,
@@ -365,20 +365,30 @@ route.put("/:podcastId", verifyToken, async (req, res) => {
 
 //DELETE PODCAST
 route.delete("/:podcastId", verifyToken, async (req, res) => {
-  try {
-    const unlinkFile = await Podcast.findById({
+  const unlinkFile = await Podcast.findById({
+    _id: req.params.podcastId,
+  });
+
+  const audio = cloudinary.uploader.destroy(unlinkFile.publicId_audio, {
+    folder: "cn_asset",
+    resource_type: "video",
+  });
+
+  const image = cloudinary.uploader.destroy(unlinkFile.publicId_image, {
+    folder: "cn_asset",
+    resource_type: "image",
+  });
+
+  // try delete file on cloudinary
+  Promise.all([audio, image])
+  .then(async () => {
+    //delete podcast data on DB
+    await Podcast.deleteOne({
       _id: req.params.podcastId,
     });
 
-    const unlinkAsync = promisify(fs.unlink);
-    await unlinkAsync(unlinkFile.audio);
-    await unlinkAsync(unlinkFile.coverImage);
-
-    const removePodcast = await Podcast.deleteOne({
-      _id: req.params.podcastId,
-    });
-
-    const removeLike = await Like.deleteOne({
+    //delete all like relate to podcast post
+    await Like.deleteOne({
       podcastId: req.params.podcastId,
       likeBy: req.user._id,
     });
@@ -392,13 +402,15 @@ route.delete("/:podcastId", verifyToken, async (req, res) => {
         url: `https://cryptic-thicket-69508.herokuapp.com/api/podcast`,
       },
     });
-  } catch (error) {
+  })
+  .catch((error) => {
     res.status(400).send({
-      message: "Podcast not found",
+      message: "Delete Podcast Fail",
       status: false,
       error: error.message,
     });
-  }
+  });
+
 });
 
 module.exports = route;
