@@ -54,22 +54,37 @@ const upload = multer({
 
 //GET ALL DATA PODCASTS by followees
 route.get("/", verifyToken, async (req, res) => {
-  const followingList = await Follow.find({
+  const currentPage = req.query.page || 1;
+  const perPage = req.query.perPage || 6;
+
+  
+
+  const getFollowingList = await Follow.find({
     userId: req.user._id,
   }).select("followedId");
 
-  const a = followingList.map((d) => d.followedId);
+  const FollowingList = getFollowingList.map((d) => d.followedId);
 
-  try {
+  try {    
+    const PodcastCount = await Podcast.find({
+      userId: { $in: FollowingList },
+    }).countDocuments();
+
     const podcasts = await Podcast.find({
-      userId: { $in: a },
+      userId: { $in: FollowingList },
     })
       .sort({ likes: "desc" })
       .populate("userId", "namePodcast , email")
+      .skip((parseInt(currentPage) - 1) * parseInt(perPage))
+      .limit(parseInt(perPage))
       .exec();
-    res.send({
+    
+      res.send({
       count: podcasts.length,
       status: true,
+      total_items : parseInt(PodcastCount),
+      current_page : parseInt(currentPage),
+      per_page : parseInt(perPage),
       podcast: podcasts.map((podcast) => {
         return {
           _id: podcast._id,
