@@ -47,7 +47,7 @@ const fileFilter = (req, files, cb) => {
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 1024 * 1024 * 500,
+    fileSize: 1024 * 1024 * 50,
   },
   fileFilter: fileFilter,
 });
@@ -55,7 +55,7 @@ const upload = multer({
 //GET ALL DATA PODCASTS by followees
 route.get("/", verifyToken, async (req, res) => {
   const currentPage = req.query.page || 1;
-  const perPage = req.query.perPage || 6;
+  const perPage = req.query.perPage || 12;
 
   
 
