@@ -5,13 +5,14 @@ const dotenv = require("dotenv");
 const app = express();
 
 // Import Routes
+const appRoute = require("./routes/appRoute");
 const authRoute = require("./routes/authRoute");
 const podcastRoute = require("./routes/podcastRoute");
 const postsRoute = require("./routes/posts");
 const likesRoute = require("./routes/likesRoute");
 const followRoute = require("./routes/followRoute");
 
-dotenv.config();
+require("dotenv").config();
 
 //Connect to DB
 mongoose.connect(
@@ -32,6 +33,7 @@ app.get("/", (req, res) => {
 });
 
 //Route Middleware
+app.use("/api/app", appRoute);
 app.use("/api/user/auth", authRoute);
 app.use("/api/podcast", podcastRoute);
 app.use("/api/posts", postsRoute);
