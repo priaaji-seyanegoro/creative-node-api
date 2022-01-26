@@ -28,7 +28,10 @@ const fileFilter = (req, files, cb) => {
     files.mimetype === "audio/mpeg" ||
     files.mimetype === "audio/vorbis" ||
     files.mimetype === "image/jpeg" ||
-    files.mimetype === "image/png"
+    files.mimetype === "image/png" ||
+    files.mimetype === "video/webm" ||
+    files.mimetype === "video/ogg" ||
+    files.mimetype === "video/mp4"
   ) {
     cb(null, true);
     // console.log(files);
@@ -36,7 +39,7 @@ const fileFilter = (req, files, cb) => {
     req.fileValidationError = {
       massage: "goes wrong on the mimetype",
       mimetype: {
-        audio: "mp3 | mpeg",
+        audio: "mp3 | mpeg | mp4",
         coverImage: "jpg/png",
       },
     };
