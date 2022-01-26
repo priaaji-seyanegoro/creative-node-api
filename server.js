@@ -11,7 +11,7 @@ const postsRoute = require("./routes/posts");
 const likesRoute = require("./routes/likesRoute");
 const followRoute = require("./routes/followRoute");
 
-dotenv.config();
+require("dotenv").config();
 
 //Connect to DB
 mongoose.connect(
